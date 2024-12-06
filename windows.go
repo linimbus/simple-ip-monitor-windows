@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"strings"
+	"time"
 
 	"github.com/astaxie/beego/logs"
 	"github.com/lxn/walk"
@@ -13,6 +15,18 @@ var mainWindow *walk.MainWindow
 
 var mainWindowWidth = 300
 var mainWindowHeight = 200
+
+func init() {
+	go func() {
+		for {
+			if mainWindow != nil && mainWindow.Visible() {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		NotifyAction()
+	}()
+}
 
 func MenuBarInit() []MenuItem {
 	return []MenuItem{
@@ -38,10 +52,13 @@ func MenuBarInit() []MenuItem {
 }
 
 var intervalNumber *walk.NumberEdit
-var filterInterface *walk.ComboBox
-var connectivityURL, outputFolder *walk.LineEdit
+var filterInterface, restfulMethod *walk.ComboBox
+var connectivityURL, restfulURL, restfulHeaderKey, restfulHeaderValue, outputFolder *walk.LineEdit
 
 func ConsoleWidget() []Widget {
+	httpMethodList := []string{
+		"PUT", "POST", "GET", "PATCH", "HEAD", "DELETE",
+	}
 	interfaceList := InterfaceOptions()
 
 	return []Widget{
@@ -56,7 +73,7 @@ func ConsoleWidget() []Widget {
 			},
 		},
 		Label{
-			Text: "Monitor Interface: ",
+			Text: "Interface Monitor: ",
 		},
 		ComboBox{
 			AssignTo: &filterInterface,
@@ -139,54 +156,105 @@ func ConsoleWidget() []Widget {
 				},
 			},
 		},
-		// Label{
-		// 	Text: "Listen Address: ",
-		// },
-		// ComboBox{
-		// 	AssignTo: &listenAddr,
-		// 	CurrentIndex: func() int {
-		// 		addr := ConfigGet().ListenAddr
-		// 		for i, item := range interfaceList {
-		// 			if addr == item {
-		// 				return i
-		// 			}
-		// 		}
-		// 		return 0
-		// 	},
-		// 	Model: interfaceList,
-		// 	OnCurrentIndexChanged: func() {
-		// 		err := ListenAddressSave(listenAddr.Text())
-		// 		if err != nil {
-		// 			ErrorBoxAction(mainWindow, err.Error())
-		// 		} else {
-		// 			BrowseURLUpdate()
-		// 		}
-		// 	},
-		// 	OnBoundsChanged: func() {
-		// 		addr := ConfigGet().ListenAddr
-		// 		for i, item := range interfaceList {
-		// 			if addr == item {
-		// 				listenAddr.SetCurrentIndex(i)
-		// 				return
-		// 			}
-		// 		}
-		// 		listenAddr.SetCurrentIndex(0)
-		// 	},
-		// },
 		Label{
-			Text: "Loop Monitor Interval: ",
+			Text: "Restful URL: ",
 		},
-		NumberEdit{
-			AssignTo:    &intervalNumber,
-			Value:       float64(ConfigGet().Interval),
-			ToolTipText: "1~300s",
-			MaxValue:    300,
-			MinValue:    1,
-			OnValueChanged: func() {
-				err := IntervalSave(int(intervalNumber.Value()))
+		LineEdit{
+			AssignTo: &restfulURL,
+			Text:     ConfigGet().RestfulURL,
+			OnEditingFinished: func() {
+				RestfulURLSave(restfulURL.Text())
+			},
+		},
+		Label{
+			Text: "Restful Method: ",
+		},
+		ComboBox{
+			AssignTo: &restfulMethod,
+			Model:    httpMethodList,
+			CurrentIndex: func() int {
+				filter := ConfigGet().RestfulMethod
+				for i, name := range httpMethodList {
+					if name == filter {
+						return i
+					}
+				}
+				return 0
+			},
+			OnCurrentIndexChanged: func() {
+				err := RestfulMethodSave(restfulMethod.Text())
 				if err != nil {
 					ErrorBoxAction(mainWindow, err.Error())
 				}
+			},
+			OnBoundsChanged: func() {
+				addr := ConfigGet().RestfulMethod
+				for i, item := range httpMethodList {
+					if addr == item {
+						restfulMethod.SetCurrentIndex(i)
+						return
+					}
+				}
+				restfulMethod.SetCurrentIndex(0)
+			},
+		},
+		Label{
+			Text: "Restful Header: ",
+		},
+		Composite{
+			Layout: HBox{MarginsZero: true},
+			Children: []Widget{
+				LineEdit{
+					AssignTo: &restfulHeaderKey,
+					Text: func() string {
+						list := strings.Split(ConfigGet().RestfulHeader, ":")
+						return list[0]
+					}(),
+					OnEditingFinished: func() {
+						RestfulHeaderSave(restfulHeaderKey.Text(), restfulHeaderValue.Text())
+					},
+				},
+				Label{
+					Text: ":",
+				},
+				LineEdit{
+					AssignTo: &restfulHeaderValue,
+					Text: func() string {
+						list := strings.Split(ConfigGet().RestfulHeader, ":")
+						if len(list) == 2 {
+							return list[1]
+						}
+						return ""
+					}(),
+					OnEditingFinished: func() {
+						RestfulHeaderSave(restfulHeaderKey.Text(), restfulHeaderValue.Text())
+					},
+				},
+			},
+		},
+
+		Label{
+			Text: "Loop Interval: ",
+		},
+		Composite{
+			Layout: HBox{MarginsZero: true},
+			Children: []Widget{
+				NumberEdit{
+					AssignTo:    &intervalNumber,
+					Value:       float64(ConfigGet().Interval),
+					ToolTipText: "5~300",
+					MaxValue:    300,
+					MinValue:    5,
+					OnValueChanged: func() {
+						err := IntervalSave(int(intervalNumber.Value()))
+						if err != nil {
+							ErrorBoxAction(mainWindow, err.Error())
+						}
+					},
+				},
+				Label{
+					Text: "Seconds",
+				},
 			},
 		},
 	}
@@ -195,7 +263,7 @@ func ConsoleWidget() []Widget {
 func mainWindows() {
 	CapSignal(CloseWindows)
 	cnt, err := MainWindow{
-		Title:          "Simple IP Monitor Windows " + VersionGet(),
+		Title:          "Simple IP Monitor " + VersionGet(),
 		Icon:           ICON_Main,
 		AssignTo:       &mainWindow,
 		MinSize:        Size{Width: mainWindowWidth, Height: mainWindowHeight},

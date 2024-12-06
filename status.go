@@ -12,6 +12,9 @@ func StatusUpdate(connectivity string) {
 	if statusBar != nil {
 		statusBar.SetText(connectivity)
 	}
+	if notify != nil {
+		notify.SetToolTip(connectivity)
+	}
 	statusConnectivity = connectivity
 }
 
@@ -19,7 +22,8 @@ func StatusBarInit() []StatusBarItem {
 	return []StatusBarItem{
 		{
 			AssignTo: &statusBar,
-			Text:     "",
+			Text:     statusConnectivity,
+			Icon:     ICON_Status,
 			Width:    300,
 			OnClicked: func() {
 				PasteClipboard(statusBar.Text())

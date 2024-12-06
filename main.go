@@ -30,5 +30,10 @@ func main() {
 		logs.Error(err.Error())
 		return
 	}
+	err = MonitorInit()
+	if err != nil {
+		logs.Error(err.Error())
+		return
+	}
 	mainWindows()
 }

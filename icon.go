@@ -37,20 +37,18 @@ func IconLoadFromBox(filename string, size walk.Size) *walk.Icon {
 }
 
 var ICON_Main *walk.Icon
-var ICON_Start *walk.Icon
-var ICON_Stop *walk.Icon
+var ICON_Status *walk.Icon
 
 var ICON_Max_Size = walk.Size{
 	Width: 128, Height: 128,
 }
 
 var ICON_Min_Size = walk.Size{
-	Width: 48, Height: 48,
+	Width: 16, Height: 16,
 }
 
 func IconInit() error {
 	ICON_Main = IconLoadFromBox("main.ico", ICON_Max_Size)
-	ICON_Start = IconLoadFromBox("start.ico", ICON_Min_Size)
-	ICON_Stop = IconLoadFromBox("stop.ico", ICON_Min_Size)
+	ICON_Status = IconLoadFromBox("status.ico", ICON_Min_Size)
 	return nil
 }

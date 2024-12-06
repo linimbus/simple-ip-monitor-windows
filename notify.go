@@ -41,7 +41,7 @@ func NotifyInit() {
 		return
 	}
 
-	err = notify.SetToolTip("")
+	err = notify.SetToolTip(statusConnectivity)
 	if err != nil {
 		logs.Error("set notify tool tip fail, %s", err.Error())
 		return
@@ -58,6 +58,17 @@ func NotifyInit() {
 		walk.App().Exit(0)
 	})
 
+	connectivityBut := walk.NewAction()
+	err = connectivityBut.SetText("Paste Clipboard")
+	if err != nil {
+		logs.Error("notify new action fail, %s", err.Error())
+		return
+	}
+
+	connectivityBut.Triggered().Attach(func() {
+		PasteClipboard(statusConnectivity)
+	})
+
 	showBut := walk.NewAction()
 	err = showBut.SetText("Show Windows")
 	if err != nil {
@@ -68,6 +79,11 @@ func NotifyInit() {
 	showBut.Triggered().Attach(func() {
 		mainWindow.SetVisible(true)
 	})
+
+	if err := notify.ContextMenu().Actions().Add(connectivityBut); err != nil {
+		logs.Error("notify add action fail, %s", err.Error())
+		return
+	}
 
 	if err := notify.ContextMenu().Actions().Add(showBut); err != nil {
 		logs.Error("notify add action fail, %s", err.Error())

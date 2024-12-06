@@ -3,11 +3,14 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/astaxie/beego/logs"
 	"github.com/lxn/walk"
@@ -141,4 +144,31 @@ func CreateTlsConfig(cert, key string) (*tls.Config, error) {
 		Certificates: []tls.Certificate{certs},
 		ClientAuth:   tls.RequestClientCert,
 	}, nil
+}
+
+func HttpRequest(url string) ([]byte, error) {
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "curl/8.10.1")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("http request fail, status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
