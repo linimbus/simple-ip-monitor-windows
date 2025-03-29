@@ -91,44 +91,45 @@ func queryIpInfo(connectivity string) ([]byte, error) {
 	return body, nil
 }
 
-func MonitorInit() error {
-	go func() {
-		for {
-			url := ConfigGet().ConnectivityURL
-			if url != "" {
-				connectivityIP, err := HttpRequest(url)
-				if err != nil {
-					logs.Warning("http request failed, %s", err.Error())
-				} else {
-					logs.Info("http request %s success, body: [%s]", url, string(connectivityIP))
-					StatusUpdate(string(connectivityIP))
-				}
-			}
-
-			ipinfo, err := queryIpInfo(statusConnectivity)
+func monitorTask() {
+	for {
+		url := ConfigGet().ConnectivityURL
+		if url != "" {
+			connectivityIP, err := HttpRequest(url)
 			if err != nil {
-				logs.Warning("query ip info failed, %s", err.Error())
-
+				logs.Warning("http request failed, %s", err.Error())
 			} else {
-				outputFile := filepath.Join(ConfigGet().OutputDirectory, "ip_info.json")
-				latest, err := os.ReadFile(outputFile)
-				if err != nil || !bytes.Equal(ipinfo, latest) {
-					err = os.WriteFile(outputFile, ipinfo, 0644)
-					if err != nil {
-						logs.Warning("write file %s failed, %s", outputFile, err.Error())
-					}
-				}
+				logs.Info("http request %s success, body: [%s]", url, string(connectivityIP))
+				StatusUpdate(string(connectivityIP))
+			}
+		}
 
-				if ConfigGet().RestfulURL != "" {
-					err := HttpPost(ConfigGet().RestfulURL, ConfigGet().RestfulHeader, ConfigGet().RestfulMethod, ipinfo)
-					if err != nil {
-						logs.Warning("http post ip info failed, %s", err.Error())
-					}
+		ipinfo, err := queryIpInfo(statusConnectivity)
+		if err != nil {
+			logs.Warning("query ip info failed, %s", err.Error())
+
+		} else {
+			outputFile := filepath.Join(ConfigGet().OutputDirectory, "ip_info.json")
+			latest, err := os.ReadFile(outputFile)
+			if err != nil || !bytes.Equal(ipinfo, latest) {
+				err = os.WriteFile(outputFile, ipinfo, 0644)
+				if err != nil {
+					logs.Warning("write file %s failed, %s", outputFile, err.Error())
 				}
 			}
 
-			time.Sleep(time.Duration(ConfigGet().Interval) * time.Second)
+			if ConfigGet().RestfulURL != "" {
+				err := HttpPost(ConfigGet().RestfulURL, ConfigGet().RestfulHeader, ConfigGet().RestfulMethod, ipinfo)
+				if err != nil {
+					logs.Warning("http post ip info failed, %s", err.Error())
+				}
+			}
 		}
-	}()
-	return nil
+
+		time.Sleep(time.Duration(ConfigGet().Interval) * time.Second)
+	}
+}
+
+func MonitorInit() {
+	go monitorTask()
 }

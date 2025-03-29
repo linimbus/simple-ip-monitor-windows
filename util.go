@@ -14,10 +14,11 @@ import (
 
 	"github.com/astaxie/beego/logs"
 	"github.com/lxn/walk"
+	"golang.org/x/sys/windows/registry"
 )
 
 func VersionGet() string {
-	return "v0.1.0"
+	return "v0.1.1"
 }
 
 func SaveToFile(name string, body []byte) error {
@@ -171,4 +172,32 @@ func HttpRequest(url string) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
+}
+
+func RegistryStartupSet(appName string, appPath string) error {
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		return fmt.Errorf("can not open registry: %v", err)
+	}
+	defer key.Close()
+
+	err = key.SetStringValue(appName, appPath)
+	if err != nil {
+		return fmt.Errorf("can not set the windows registry: %v", err)
+	}
+	return nil
+}
+
+func RegistryStartupDel(appName string) error {
+	key, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
+	if err != nil {
+		return fmt.Errorf("can not open registry: %v", err)
+	}
+	defer key.Close()
+
+	err = key.DeleteValue(appName)
+	if err != nil {
+		return fmt.Errorf("can not set the windows registry: %v", err)
+	}
+	return nil
 }

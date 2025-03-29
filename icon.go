@@ -8,10 +8,10 @@ import (
 )
 
 func IconLoadFromBox(filename string, size walk.Size) *walk.Icon {
-	body, err := BoxFile().Bytes(filename)
+	body, err := Asset(filename)
 	if err != nil {
 		logs.Error(err.Error())
-		return nil
+		return walk.IconApplication()
 	}
 	dir := DEFAULT_HOME + "\\icon\\"
 	_, err = os.Stat(dir)
@@ -19,19 +19,19 @@ func IconLoadFromBox(filename string, size walk.Size) *walk.Icon {
 		err = os.MkdirAll(dir, 644)
 		if err != nil {
 			logs.Error(err.Error())
-			return nil
+			return walk.IconApplication()
 		}
 	}
 	filepath := dir + filename
 	err = SaveToFile(filepath, body)
 	if err != nil {
 		logs.Error(err.Error())
-		return nil
+		return walk.IconApplication()
 	}
 	icon, err := walk.NewIconFromFileWithSize(filepath, size)
 	if err != nil {
 		logs.Error(err.Error())
-		return nil
+		return walk.IconApplication()
 	}
 	return icon
 }
@@ -47,8 +47,7 @@ var ICON_Min_Size = walk.Size{
 	Width: 16, Height: 16,
 }
 
-func IconInit() error {
+func IconInit() {
 	ICON_Main = IconLoadFromBox("main.ico", ICON_Max_Size)
 	ICON_Status = IconLoadFromBox("status.ico", ICON_Min_Size)
-	return nil
 }

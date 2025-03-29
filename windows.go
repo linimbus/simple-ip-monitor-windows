@@ -13,9 +13,6 @@ import (
 
 var mainWindow *walk.MainWindow
 
-var mainWindowWidth = 300
-var mainWindowHeight = 200
-
 func init() {
 	go func() {
 		for {
@@ -54,6 +51,7 @@ func MenuBarInit() []MenuItem {
 var intervalNumber *walk.NumberEdit
 var filterInterface, restfulMethod *walk.ComboBox
 var connectivityURL, restfulURL, restfulHeaderKey, restfulHeaderValue, outputFolder *walk.LineEdit
+var autoStartupCheck *walk.CheckBox
 
 func ConsoleWidget() []Widget {
 	httpMethodList := []string{
@@ -253,7 +251,18 @@ func ConsoleWidget() []Widget {
 					},
 				},
 				Label{
-					Text: "Seconds",
+					Text: "Seconds      ",
+				},
+				CheckBox{
+					AssignTo: &autoStartupCheck,
+					Text:     "Auto Startup",
+					Checked:  ConfigGet().AutoStartup,
+					OnClicked: func() {
+						err := AutoStartupSave(autoStartupCheck.Checked())
+						if err != nil {
+							ErrorBoxAction(mainWindow, err.Error())
+						}
+					},
 				},
 			},
 		},
@@ -266,8 +275,8 @@ func mainWindows() {
 		Title:          "Simple IP Monitor " + VersionGet(),
 		Icon:           ICON_Main,
 		AssignTo:       &mainWindow,
-		MinSize:        Size{Width: mainWindowWidth, Height: mainWindowHeight},
-		Size:           Size{Width: mainWindowWidth, Height: mainWindowHeight},
+		MinSize:        Size{Width: 350, Height: 200},
+		Size:           Size{Width: 350, Height: 200},
 		Layout:         VBox{Margins: Margins{Top: 5, Bottom: 5, Left: 5, Right: 5}},
 		Font:           Font{Bold: true},
 		MenuItems:      MenuBarInit(),

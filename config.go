@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/astaxie/beego/logs"
@@ -17,6 +18,7 @@ type Config struct {
 	RestfulMethod   string
 	RestfulURL      string
 	Interval        int
+	AutoStartup     bool
 }
 
 var configCache = Config{
@@ -27,6 +29,7 @@ var configCache = Config{
 	RestfulMethod:   "POST",
 	RestfulURL:      "",
 	Interval:        60,
+	AutoStartup:     false,
 }
 
 var configFilePath string
@@ -83,33 +86,57 @@ func IntervalSave(value int) error {
 	return configSyncToFile()
 }
 
-func ConfigInit() error {
-	configFilePath = fmt.Sprintf("%s%c%s", ConfigDirGet(), os.PathSeparator, "config.json")
+func AutoStartupSave(value bool) error {
 
-	_, err := os.Stat(configFilePath)
-	if err != nil {
-		err = configSyncToFile()
+	if value {
+		execPath, err := os.Executable()
 		if err != nil {
-			logs.Error("config sync to file fail, %s", err.Error())
+			return fmt.Errorf("call executable failed, %s", err.Error())
+		}
+		err = RegistryStartupSet(APPLICATION_NAME, execPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := RegistryStartupDel(APPLICATION_NAME)
+		if err != nil {
 			return err
 		}
 	}
 
-	value, err := os.ReadFile(configFilePath)
+	configCache.AutoStartup = value
+	return configSyncToFile()
+}
+
+func ConfigInit() {
+	var err error
+	var value []byte
+
+	configFilePath = filepath.Join(ConfigDirGet(), "config.json")
+
+	defer func() {
+		if err != nil {
+			err = configSyncToFile()
+			if err != nil {
+				logs.Error("config sync to file fail, %s", err.Error())
+			}
+		}
+	}()
+
+	_, err = os.Stat(configFilePath)
+	if err != nil {
+		logs.Info("config file not exist, create a new one")
+	}
+
+	value, err = os.ReadFile(configFilePath)
 	if err != nil {
 		logs.Error("read config file from app data dir fail, %s", err.Error())
-		configSyncToFile()
-
-		return err
+		return
 	}
 
 	err = json.Unmarshal(value, &configCache)
 	if err != nil {
 		logs.Error("json unmarshal config fail, %s", err.Error())
-		configSyncToFile()
-
-		return err
+		return
 	}
-
-	return nil
 }
